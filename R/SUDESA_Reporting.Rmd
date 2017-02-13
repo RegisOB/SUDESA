@@ -1,0 +1,270 @@
+---
+title: "Weekly SUDESA Reporting"
+author: "SUDESA team data management"
+date: '`r Sys.Date()`'
+output:
+    pdf_document: default
+---
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE }
+
+##Connexion on ODK
+library(RMySQL)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(stringr)
+library(RPostgreSQL)
+library(lubridate)
+library(tidyr)
+
+mydb = dbConnect(MySQL(), user='data', password='data', dbname='odk_prod', host='192.168.1.62')
+
+##Connexion on openhds
+mydb2 = dbConnect(MySQL(), user='data', password='data', dbname='openhds', host='192.168.1.62')
+
+##Read data table at baseline
+data.baseline <- dbReadTable(mydb, "BASELINE_CORE")
+
+##Read data table for fielworker
+data.fwd <- dbReadTable(mydb2, "fieldworker")
+data.fwd.sub <- data.fwd[, c('extId', "firstName")]
+names(data.fwd.sub)[1] <- "OPENHDS_FIELD_WORKER_ID"
+
+
+data.baseline.sub <- data.baseline[, c("OPENHDS_LOCATION_ID", "START", 
+                                       "INDIVIDUAL_INFO_INDIVIDUAL_ID", "OPENHDS_FIELD_WORKER_ID")]
+
+data.baseline.sub$VISIT_DATE1 <- as.Date(str_sub(data.baseline.sub$START , 1, 10), format = '%Y-%m-%d')
+
+##Merging 
+data.baseline.sub <- merge(data.baseline.sub, data.fwd.sub, all.x = T)
+
+##Read data table on location
+data.location <- dbReadTable(mydb, "LOCATION_REGISTRATION_CORE")
+data.location.sub <- data.location[, c("OPENHDS_LOCATION_ID", "QUARTER")]
+
+##Merging
+data.merging <- merge(data.baseline.sub, data.location.sub, all.x = F)
+
+##Total number househoulds per fieldworkers
+tab1 <- data.merging %>%
+  filter(!duplicated(OPENHDS_LOCATION_ID)) %>%
+  group_by(firstName) %>%
+    summarise(N = n())
+
+```
+
+#Global summary 
+
+- **Starting date**: `r min(data.merging$VISIT_DATE1)`
+- **Starting quarter**: `r data.merging$QUARTER[which.min(data.merging$VISIT_DATE1)]`
+
+- **Last update date**: `r max(data.merging$VISIT_DATE1)` 
+- **Last update quarter**: `r data.merging$QUARTER[which.max(data.merging$VISIT_DATE1)]`
+
+```{r, fig.show=T, echo=FALSE, warning=FALSE, message=FALSE , fig.height= 3.1}
+
+fig1.1 <- ggplot(tab1, aes(x = firstName, y = N)) + 
+  geom_bar(stat = 'identity', fill="lightblue") + xlab('Field worker name') +
+  ylab('Households visited (n)')+ geom_text(aes(y=N+6, label = N))+
+  theme(axis.text.x = element_text(angle=90))
+
+fig1.1 
+
+##Total population size visited per fieldworkers
+tab2 <- data.merging %>%
+  group_by(firstName) %>%
+    summarise(N = n())
+
+fig1.2 <- ggplot(tab2, aes(x = firstName, y = N)) + 
+  geom_bar(stat = 'identity', fill="lightblue") + xlab('Field worker name') +
+  ylab('Population size visited (n)')+ geom_text(aes(y=N+20, label = N))+
+  theme(axis.text.x = element_text(angle=90))
+
+fig1.2
+
+```
+
+\pagebreak
+
+```{r ,echo=FALSE, warning=FALSE, message=FALSE}
+data.merging$VISIT_DATE2 <- rep(max(data.merging$VISIT_DATE1, na.rm = T), nrow(data.merging))
+data.merging$Day <- data.merging$VISIT_DATE2 - data.merging$VISIT_DATE1
+
+#minimum days
+min_day <- 8
+
+data.merging1 <- data.merging %>%
+  filter(Day <= min_day)
+```
+
+
+#Summary last `r (min_day-1)` days
+
+
+
+- **Starting date**: `r min(data.merging1$VISIT_DATE1)`
+- **Starting quarter**: `r data.merging1$QUARTER[which.min(data.merging1$VISIT_DATE1)]`
+
+- **Last update date**: `r max(data.merging1$VISIT_DATE1)` 
+- **Last update quarter**: `r data.merging1$QUARTER[which.max(data.merging1$VISIT_DATE1)]`
+
+
+
+```{r, fig.show=T, echo=FALSE, warning=FALSE, message=FALSE , fig.height= 3.7}
+
+##Total number househoulds per fieldworkers
+tab1 <- data.merging1 %>%
+  filter(!duplicated(OPENHDS_LOCATION_ID)) %>%
+  group_by(firstName) %>%
+    summarise(N = n())
+
+cutoff1 <- 10*(min_day-1)
+cutoff2 <- 15*(min_day-1)
+
+# cutoff1 <- 10*(min_day)
+# cutoff2 <- 15*(min_day)
+
+
+fig1.1 <- ggplot(tab1, aes(x = firstName, y = N)) + 
+  geom_bar(stat = 'identity', fill="lightblue") + xlab('Field worker name') +
+  ylab('Households visited (n)')+ geom_text(aes(y=N+2, label = N))+
+  scale_y_continuous(breaks = c(1, 10, 30, 50, 70, 90, 105))+
+  geom_hline(yintercept = cutoff1, colour="red", linetype = "longdash") +
+  annotate("text", x=1, y=cutoff1+3, label="Minimum", colour="red", size=3) +
+  geom_hline(yintercept = cutoff2, colour="blue", linetype = "longdash") +
+    annotate("text", x=1, y=cutoff2+3, label="Maximum", colour="blue", size=3)+
+  theme(axis.text.x = element_text(angle=90))
+
+fig1.1 
+
+##Total population size visited per fieldworkers
+tab2 <- data.merging1 %>%
+  #distinct(OPENHDS_LOCATION_ID, .keep_all = T) %>%
+  group_by(firstName) %>%
+    summarise(N = n())
+
+fig1.2 <- ggplot(tab2, aes(x = firstName, y = N)) + 
+  geom_bar(stat = 'identity', fill="lightblue") + xlab('Field worker name') +
+  ylab('Population size visited (n)')+ geom_text(aes(y=N+5, label = N))+
+  theme(axis.text.x = element_text(angle= 90))
+
+fig1.2
+
+```
+ 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, results= 'hide'}
+dbDisconnect(mydb)
+dbDisconnect(mydb2)
+```
+
+
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=10}
+#Data for 7 lastdays
+data.merging_D7 <- data.merging %>%
+  filter(Day <= 8) %>%
+    mutate(Day.name = wday(VISIT_DATE1, label = T, abbr = F))%>%
+     filter(!duplicated(OPENHDS_LOCATION_ID)) %>%
+      count(VISIT_DATE1, firstName)
+        #count(firstName)
+
+#Figure: Total number of households visited (n) per FWR
+cutoff1 <- 10
+cutoff2 <- 15
+
+fig1.1 <- ggplot(data.merging_D7, aes(x = firstName, y = n)) + 
+  geom_bar(stat = 'identity', fill="lightblue") + xlab('Field worker name') +
+  ylab('Total number of households visited (n)')+ geom_text(aes(y=n-1, label = n))+
+  scale_y_continuous(breaks = c(1, 5, 10, 15, 20, 25))+
+  geom_hline(yintercept = cutoff1, colour="red", linetype = "longdash") +
+  annotate("text", x=1, y=cutoff1+1, label="Minimum", colour="red", size=3) +
+  geom_hline(yintercept = cutoff2, colour="blue", linetype = "longdash") +
+    annotate("text", x=1, y=cutoff2+1, label="Maximum", colour="blue", size=3)+
+  theme(axis.text.x = element_text(angle=90))+
+  facet_grid(VISIT_DATE1~.)
+
+fig1.1 
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE }
+
+##Connexion on postgis
+mydb3 <- dbConnect(dbDriver("PostgreSQL"), dbname='sudesa', host='192.168.1.62', port='5432', user='postgres', password='test' )
+
+data.build <- dbReadTable(mydb3, "polygones_02_02_2017")
+
+##Select the quarters with information (remove abongo and adouma for the moment)
+data.build.sub <- data.build %>%
+  #filter(!is.na(quarter) & quarter!='NA' & quarter!='Adouma' & quarter!='Abongo') %>%
+    filter(!is.na(quarter) & quarter!='NA') %>%
+    select(one_of(c("id_menage", "visited", "inhabited", "quarter", "type_habit","type_hab_1", "name_habit")))
+
+##Modifie type habitation
+data.build.sub$type_habit_a <- NA
+attach(data.build.sub)
+
+#For Households
+cond1 <- !is.na(id_menage) & (type_habit == '0'|type_habit == 'menage')
+#cond1 <- (type_habit == '0'|type_habit == 'menage')
+data.build.sub$type_habit_a[cond1] <- 'Households'
+
+#For households with residents absent
+cond2 <- (is.na(id_menage) & type_habit == '2') | (is.na(id_menage) & type_hab_1 == 'Absent')
+data.build.sub$type_habit_a[cond2] <- 'Households (Absents)'
+
+#For Building under construction
+cond3 <- is.na(id_menage) & type_habit == '1' 
+data.build.sub$type_habit_a[cond3] <- 'Building under construction'
+
+#For Toillet
+cond4 <- is.na(id_menage) & type_habit == '3' 
+data.build.sub$type_habit_a[cond4] <- 'Toillet'
+
+#For refusal
+cond5 <- (is.na(id_menage) & type_habit == '15') | (is.na(id_menage) & type_hab_1 == 'refus') 
+data.build.sub$type_habit_a[cond5] <- 'Refusal'
+
+#For others
+cond6 <- !cond1&!cond2&!cond3&!cond4&!cond5
+data.build.sub$type_habit_a[cond6] <- 'Others'
+
+detach(data.build.sub)
+```
+
+
+```{r, eval=FALSE, fig.height=5, fig.show=T, message=FALSE, warning=FALSE, include=FALSE}
+
+##Number of buildings per type
+tab1 <- data.build.sub %>%
+  filter(!is.na(type_habit_a)) %>%
+   group_by(quarter, type_habit_a) %>%
+    summarise(N = n())
+
+tab2 <- data.build.sub %>%
+  filter(!is.na(type_habit_a)) %>%
+   group_by(quarter) %>%
+    summarise(N = n()) 
+      
+
+
+fig1.1 <- ggplot(tab1, aes(x = type_habit_a, y = N)) + 
+  geom_bar(stat = 'identity', fill="lightblue") + xlab('Type of buildings') +
+  ylab('Total number (n)')+ geom_text(aes(y=N+10, label = N))+
+  facet_grid(.~quarter)+
+  theme(axis.text.x = element_text(angle=-90))
+
+fig1.1 
+
+```
+ 
+
+
+
+
+
