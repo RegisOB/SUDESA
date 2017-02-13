@@ -217,6 +217,40 @@ Per_buil_v <- round(100*N_buil_v/N_buil, 1)
 N_hous <- ceiling(57880/6)
 Perc_hous <- round(100*N_hous/N_buil, 1)
 
+##Data for age pyramid
+data.baseline.sub1 <- data.baseline %>%
+  select(one_of('OPENHDS_LOCATION_ID', 'INDIVIDUAL_INFO_DATE_OF_BIRTH', 'INDIVIDUAL_INFO_GENDER',
+                'START')) %>%
+        mutate(DateBirth = as.Date(str_sub(INDIVIDUAL_INFO_DATE_OF_BIRTH , 1, 10), format = '%Y-%m-%d'),
+               DateVisit = as.Date(str_sub(START , 1, 10), format = '%Y-%m-%d'),
+               Age = ceiling(time_length(interval(DateBirth, DateVisit), 'years')),
+               AgeGr = cut(Age, breaks = seq(0, 120, 10))) %>%
+                 filter(!is.na(AgeGr))
+
+tab2.2 <- data.baseline.sub1 %>%
+            count(INDIVIDUAL_INFO_GENDER, AgeGr)
+
+##Data for statistics person per household
+tab2.3 <- data.baseline.sub1 %>%
+  count(OPENHDS_LOCATION_ID) %>%
+    summarise(M1 = ceiling(mean(n)), M2 = quantile(n, 0.25), M3 = quantile(n, 0.75)) %>%
+      mutate(M4 = paste(M1, ' (', M2, '-', M3, ')', sep = '')) 
+names(tab2.3)[4] <- 'Average population size per household(Q1-Q3)'
+       
+tab2.4 <- data.baseline.sub1 %>%
+    summarise(M1 = ceiling(median(Age)), M2 = quantile(Age, 0.25), M3 = quantile(Age, 0.75)) %>%
+     mutate(M4 = paste(M1, ' (', M2, '-', M3, ')', sep = '')) 
+names(tab2.4)[4] <- 'Age median(Q1-Q3), Yrs'
+
+tab2.5 <- data.baseline.sub1 %>%
+   count(INDIVIDUAL_INFO_GENDER) %>%
+    spread(INDIVIDUAL_INFO_GENDER, n) %>%
+      mutate(sex.ratio = paste(F, '/', M, sep = ''))
+names(tab2.5)[3] <- 'Sex ratio(F/M)'
+
+tab2.6 <- tab2.3[, 4] %>%
+  bind_cols(as.data.frame(tab2.4[, 4]), as.data.frame(tab2.5[, 3]))
+
 ```
 
 
@@ -231,28 +265,22 @@ names(tab1.1)[5] <- 'Buildings visited'
 kable(tab1.1[, c(5, 2, 1, 4, 3)], align = 'c')
 ```
 
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Demographics Characteristics of lambarene population
+names(tab2.6)[2] <- 'Age median(Q1-Q3), Yrs'
+kable(tab2.6, align = 'c')
+```
+
 
 ```{r, fig.show=T, echo=FALSE, warning=FALSE, message=FALSE , fig.height= 6, fig.width= 8}
 #Pyramides des ages
-data.baseline.sub1 <- data.baseline %>%
-  select(one_of('OPENHDS_LOCATION_ID', 'INDIVIDUAL_INFO_DATE_OF_BIRTH', 'INDIVIDUAL_INFO_GENDER',
-                'START')) %>%
-        mutate(DateBirth = as.Date(str_sub(INDIVIDUAL_INFO_DATE_OF_BIRTH , 1, 10), format = '%Y-%m-%d'),
-               DateVisit = as.Date(str_sub(START , 1, 10), format = '%Y-%m-%d'),
-               Age = ceiling(time_length(interval(DateBirth, DateVisit), 'years')),
-               AgeGr = cut(Age, breaks = seq(0, 120, 10))) %>%
-                 count(INDIVIDUAL_INFO_GENDER, AgeGr) %>%
-                   filter(!is.na(AgeGr))
-
-
-
 ## Tracer la pyramide des ages
-fig2.1 <- ggplot(data.baseline.sub1, 
+fig2.1 <- ggplot(tab2.2, 
                  aes(x = AgeGr, y = n, fill = INDIVIDUAL_INFO_GENDER)) +
   ylab('Count(n)') + xlab('Age groups (Yrs)')+ labs(fill = 'Sex')+
-  geom_bar(data = subset(data.baseline.sub1, INDIVIDUAL_INFO_GENDER == "F"),
+  geom_bar(data = subset(tab2.2, INDIVIDUAL_INFO_GENDER == "F"),
            stat = "identity") +
-  geom_bar(data = subset(data.baseline.sub1, INDIVIDUAL_INFO_GENDER == "M"),
+  geom_bar(data = subset(tab2.2, INDIVIDUAL_INFO_GENDER == "M"),
            stat = "identity",
            position = "identity",
            mapping = aes(y = -n)) +
