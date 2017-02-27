@@ -1,0 +1,73 @@
+---
+title: "SUDESA report"
+author: "Regis Obiang"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+##Connexion on ODK
+library(RMySQL)
+library(dplyr)
+library(knitr)
+library(stringr)
+library(RPostgreSQL)
+library(lubridate)
+library(tidyr)
+library(reshape2)
+
+#mydb = dbConnect(MySQL(), user='data', password='data', dbname='odk_prod', host='192.168.1.62')
+
+##Connexion on openhds
+mydb2 = dbConnect(MySQL(), user='data', password='data', dbname='openhds', host='192.168.1.62')
+
+##Read data table at baseline
+data.baseline <- dbReadTable(mydb, "BASELINE_CORE")
+
+##Read data table for fielworker
+data.fwd <- dbReadTable(mydb2, "fieldworker")
+data.fwd.sub <- data.fwd[, c('extId', "firstName")]
+names(data.fwd.sub)[1] <- "OPENHDS_FIELD_WORKER_ID"
+
+
+data.baseline.sub <- data.baseline[, c("OPENHDS_LOCATION_ID", "START", 
+                                       "INDIVIDUAL_INFO_INDIVIDUAL_ID", "OPENHDS_FIELD_WORKER_ID")]
+
+data.baseline.sub$VISIT_DATE1 <- as.Date(str_sub(data.baseline.sub$START , 1, 10), format = '%Y-%m-%d')
+
+##Merging 
+data.baseline.sub <- merge(data.baseline.sub, data.fwd.sub, all.x = T)
+
+##Read data table on location
+data.location <- dbReadTable(mydb, "LOCATION_REGISTRATION_CORE")
+data.location.sub <- data.location[, c("OPENHDS_LOCATION_ID", "QUARTER")]
+
+##Merging
+data.merging <- merge(data.baseline.sub, data.location.sub, all.x = F)
+
+##Definition T0 et T1
+
+StarDate <- as.Date(as.character(start_date), format = '%Y-%m-%d')
+EndDate <-  as.Date(as.character(Sys.Date()), format = '%Y-%m-%d')
+
+##Total number househoulds per fieldworkers
+tab.house <- data.merging %>%
+  filter(!duplicated(OPENHDS_LOCATION_ID)) %>%
+   #filter(grepl('Genalda|Igor|Augrel|Judith|Ndogo', firstName))%>%
+    filter(VISIT_DATE1 >= StarDate & VISIT_DATE1 <= EndDate)%>%
+     group_by(firstName, VISIT_DATE1) %>%
+      summarise(N = n()) %>%
+        melt(id = c('firstName', 'VISIT_DATE1')) %>%
+          acast(VISIT_DATE1 ~ firstName, sum, margins = T)
+
+tab.houseb <- as.data.frame(tab.house)
+row.names(tab.houseb)[nrow(tab.houseb)] <- 'Total'
+colnames(tab.houseb)[ncol(tab.houseb)] <- 'Total'
+        
+kable(tab.houseb, caption = 'Number of households visited per fieldworkers')
+
+```
+
+$$SUDESA Data from `r StarDate` to `r EndDate`$$
+
