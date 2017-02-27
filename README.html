@@ -121,7 +121,7 @@ $(document).ready(function () {
 
 <div id="sudesa" class="section level1">
 <h1>SUDESA</h1>
-<p>Suivi Demographique et de Santé (Health Demographic Surveillance) for Lambarene town</p>
+<p>Suivi Demographique et de Santé (Health Demographic Surveillance) for Lambarene town.</p>
 </div>
 <div id="description" class="section level1">
 <h1>Description</h1>
@@ -131,15 +131,19 @@ $(document).ready(function () {
 <li>To show the daily working each field worker</li>
 <li>To perform the statistical demographical</li>
 <li>To perform the mapping</li>
+<li>To generate queries for constencies errors</li>
 </ul>
 </div>
-<div id="tools" class="section level1">
-<h1>Tools</h1>
+<div id="functions-developped" class="section level1">
+<h1>Functions developped:</h1>
 <ul>
-<li>dplyr</li>
-<li>knitr</li>
-<li>sp</li>
-<li>ggplot2</li>
+<li><strong>SUDESA_report</strong>: This function generates three differents reports. This function is going to connect automatically to CERMEL local server to have access to SUDESA data updated and saved on OpenHDS server and PostGIS.
+<ol style="list-style-type: decimal">
+<li>Report for Human Ressources Direction (Monthly)</li>
+<li>Summary Report for Research teams at CERMEL (Weekly)</li>
+<li>Full Report with the demographic statistics update and mapping</li>
+</ol></li>
+<li><strong>SUDESA_query</strong>: This function generates the queries concerning the constencies errors done by fields workers each week.</li>
 </ul>
 </div>
 
