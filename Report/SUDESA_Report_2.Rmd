@@ -140,7 +140,7 @@ kable(tab.demo1, align = 'c')
 ##Data for age pyramid
 data.baseline.sub1 <- data.baseline %>%
   select(one_of('OPENHDS_LOCATION_ID', 'INDIVIDUAL_INFO_DATE_OF_BIRTH', 'INDIVIDUAL_INFO_GENDER',
-                'START')) %>%
+                'START', 'INDIVIDUAL_INFO_GROSSESSE', 'CNAMGS', 'INDIVIDUAL_INFO_INDIVIDUAL_ID')) %>%
         mutate(DateBirth = as.Date(str_sub(INDIVIDUAL_INFO_DATE_OF_BIRTH , 1, 10), format = '%Y-%m-%d'),
                DateVisit = as.Date(str_sub(START , 1, 10), format = '%Y-%m-%d'),
                Age = ceiling(time_length(interval(DateBirth, DateVisit), 'years')),
@@ -156,10 +156,10 @@ tab2.3 <- data.baseline.sub1 %>%
         rename('Average pop. size/household(Q1-Q3)' = M4)
        
 tab2.4 <- data.baseline.sub1 %>%
-    summarise(M1 = ceiling(median(Age)), M2 = quantile(Age, 0.25), M3 = quantile(Age, 0.75)) %>%
+    summarise(M1 = ceiling(mean(Age)), M2 = quantile(Age, 0.25), M3 = quantile(Age, 0.75)) %>%
      mutate(M4 = paste(M1, ' (', M2, '-', M3, ')', sep = '')) %>%
       select(one_of(c('M4')))%>%
-       rename('Age median(Q1-Q3), Yrs' = M4)
+       rename('Mean age(Q1-Q3), Yrs' = M4)
 
 tab2.5 <- data.baseline.sub1 %>%
    count(INDIVIDUAL_INFO_GENDER) %>%
@@ -168,17 +168,23 @@ tab2.5 <- data.baseline.sub1 %>%
        select(one_of(c('sex.ratio')))%>%
         rename('Sex ratio(F/M)' = sex.ratio)
 
-tab2.6 <- data.baseline %>%
+##Pregnagy among women 12-45 yrs 
+tab2.6a <- data.baseline.sub1 %>%
+  distinct(INDIVIDUAL_INFO_INDIVIDUAL_ID, .keep_all = T) %>%
+     filter(Age >= 12 & Age < 50) %>%
+       count()
+
+tab2.6 <- data.baseline.sub1 %>%
   distinct(INDIVIDUAL_INFO_INDIVIDUAL_ID, .keep_all = T) %>%
    group_by(INDIVIDUAL_INFO_GROSSESSE) %>%
     filter(INDIVIDUAL_INFO_GROSSESSE == 'yes') %>%
-    summarise(N1 = n(), P1 = round(100*N1/tab.pop[1, 1], 1)) %>%
+    summarise(N1 = n(), P1 = round(100*N1/tab2.6a$n, 1)) %>%
       mutate(N2 = paste(N1, ' (', P1, '%)', sep = '')) %>%
        select(one_of(c('N2'))) %>%
-        rename('Pregnancy' = N2)
+        rename('Pregnancy (12-50 yrs)' = N2)
           
 
-tab2.7 <- data.baseline %>%
+tab2.7 <- data.baseline.sub1 %>%
   distinct(INDIVIDUAL_INFO_INDIVIDUAL_ID, .keep_all = T) %>%
    group_by(CNAMGS) %>%
     filter(CNAMGS == 'yes') %>%

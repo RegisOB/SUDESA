@@ -175,7 +175,6 @@ fig1.1 <- ggplot(tab1, aes(x = type_habit_a, y = n)) +
   theme(axis.text.x = element_text(angle=-90))
 
 fig1.1 
-
 ```
 
 ```{r, include=FALSE}
@@ -227,7 +226,7 @@ Perc_hous <- round(100*N_hous/N_buil, 1)
 ##Data for age pyramid
 data.baseline.sub1 <- data.baseline %>%
   select(one_of('OPENHDS_LOCATION_ID', 'INDIVIDUAL_INFO_DATE_OF_BIRTH', 'INDIVIDUAL_INFO_GENDER',
-                'START')) %>%
+                'START', 'INDIVIDUAL_INFO_GROSSESSE', 'CNAMGS', 'INDIVIDUAL_INFO_INDIVIDUAL_ID')) %>%
         mutate(DateBirth = as.Date(str_sub(INDIVIDUAL_INFO_DATE_OF_BIRTH , 1, 10), format = '%Y-%m-%d'),
                DateVisit = as.Date(str_sub(START , 1, 10), format = '%Y-%m-%d'),
                Age = ceiling(time_length(interval(DateBirth, DateVisit), 'years')),
@@ -246,12 +245,12 @@ tab2.3 <- data.baseline.sub1 %>%
   count(OPENHDS_LOCATION_ID) %>%
     summarise(M1 = ceiling(mean(n)), M2 = quantile(n, 0.25), M3 = quantile(n, 0.75)) %>%
       mutate(M4 = paste(M1, ' (', M2, '-', M3, ')', sep = '')) %>%
-        rename('Average population size per household(Q1-Q3)' = M4)
+        rename('Average population size/household(Q1-Q3)' = M4)
        
 tab2.4 <- data.baseline.sub1 %>%
-    summarise(M1 = ceiling(median(Age)), M2 = quantile(Age, 0.25), M3 = quantile(Age, 0.75)) %>%
+    summarise(M1 = ceiling(mean(Age)), M2 = quantile(Age, 0.25), M3 = quantile(Age, 0.75)) %>%
      mutate(M4 = paste(M1, ' (', M2, '-', M3, ')', sep = '')) %>%
-       rename('Age median(Q1-Q3), Yrs' = M4)
+       rename('Mean age(Q1-Q3), Yrs' = M4)
 
 tab2.5 <- data.baseline.sub1 %>%
    count(INDIVIDUAL_INFO_GENDER) %>%
@@ -278,7 +277,7 @@ kable(tab1.1[, c(5, 2, 1, 4, 3)], align = 'c')
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 #Demographics Characteristics of lambarene population
-names(tab2.6)[3] <- 'Age median(Q1-Q3), Yrs'
+names(tab2.6)[3] <- 'Mean age(Q1-Q3), Yrs'
 kable(tab2.6, align = 'c')
 ```
 
