@@ -1,6 +1,6 @@
 SUDESA_report <-
   function(report = 1,
-           start_date = '2016-12-01',
+           start_date = '2017-02-01',
            end_date = Sys.Date()) {
     #Objective: This function generates three different reports. This function is going
     #to connect automatically to local server of CERMEL to have access to update SUDESA
@@ -55,7 +55,7 @@ SUDESA_report <-
       
       #Remove all SUDESA_Report_1
       AllTimeSheet <-
-        list.files(path = getwd(), pattern = "^SUDESA_Report_1")
+        list.files(path = getwd(), pattern = "SUDESA_Report_1.pdf")
       file.remove(AllTimeSheet)
 
       #Remove others files
@@ -68,7 +68,7 @@ SUDESA_report <-
     
     if (report == 2) {
       
-      #Generate the report for meeting in Maxime team
+      #Generate the report for meeting in cermel teams
       render('SUDESA_Report_2.Rmd', 'pdf_document')
       
       #Rename file template
@@ -77,7 +77,7 @@ SUDESA_report <-
       
       #Remove all SUDESA_Report_1
       AllTimeSheet <-
-        list.files(path = getwd(), pattern = "^SUDESA_Report_2")
+        list.files(path = getwd(), pattern = "SUDESA_Report_2.pdf")
       file.remove(AllTimeSheet)
       
       #Remove others files
@@ -99,7 +99,7 @@ SUDESA_report <-
       
       #Remove all SUDESA_Report_3
       AllTimeSheet <-
-        list.files(path = getwd(), pattern = "^SUDESA_Report_3")
+        list.files(path = getwd(), pattern = "SUDESA_Report_3.pdf")
       file.remove(AllTimeSheet)
       
       #Remove others files
