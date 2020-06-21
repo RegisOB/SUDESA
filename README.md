@@ -1,7 +1,7 @@
 # SUDESA
 Suivi Demographique et de Santé (Health Demographic Surveillance) for Lambarene town.
 
-#Description
+## Description
 This project will enable:
 
 - To generate a report each week
@@ -11,7 +11,7 @@ This project will enable:
 - To generate queries for constencies errors
 
 
-#Functions developped:
+## Functions developped:
 - **SUDESA_report**: This function generates three differents reports. This function is going
     to connect automatically to CERMEL local server to have access to SUDESA
     data updated and saved on OpenHDS server and PostGIS.
