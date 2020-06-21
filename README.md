@@ -1,5 +1,5 @@
 # SUDESA
-Suivi Demographique et de Santé (Health Demographic Surveillance) for Lambarene town.
+Suivi Demographique et de Santé (Health Demographic Surveillance) for Lambarene town in Gabon.
 
 ## Description
 This project will enable:
